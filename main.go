@@ -21,7 +21,7 @@ import (
 var config data.Config
 
 func init() {
-	confPath := flag.String("c", "/simon/conf/proxy.yaml", "config file path(yaml).")
+	confPath := flag.String("c", "./config.yaml", "config file path(yaml).")
 	demo := flag.Bool("demo", false, "Give a demo config file.")
 	flag.Parse()
 
