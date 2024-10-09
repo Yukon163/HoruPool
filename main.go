@@ -2,11 +2,12 @@ package main
 
 import (
 	"AkuaProxy/confbox"
-	"AkuaProxy/data"
 	"AkuaProxy/httpcompress"
+	"AkuaProxy/internal"
 	"encoding/json"
 	"flag"
 	"fmt"
+	"github.com/quic-go/quic-go"
 	"github.com/quic-go/quic-go/http3"
 	"log"
 	"net/http"
@@ -18,7 +19,7 @@ import (
 	"syscall"
 )
 
-var config data.Config
+var config internal.Config
 
 func init() {
 	confPath := flag.String("c", "./config.yaml", "config file path(yaml).")
@@ -26,20 +27,20 @@ func init() {
 	flag.Parse()
 
 	if *demo {
-		if err := confbox.Save("./demo.yaml", data.Config{
-			PointLists: []data.PointList{
+		if err := confbox.Save("./demo.yaml", internal.Config{
+			PointLists: []internal.PointList{
 				{
 					Port: 8080,
-					Points: map[data.SrcUrl]data.DstUrl{
-						"https://source1.com:443": "https://destination1.com",
-						"https://source2.com":     "https://destination2.com",
+					Points: map[internal.SrcUrl]internal.DstUrl{
+						"source1.com": "https://destination1.com",
+						"source2.com": "https://destination2.com",
 					},
 				},
 				{
 					Port: 80,
-					Points: map[data.SrcUrl]data.DstUrl{
-						"https://source3.com": "https://destination3.com",
-						"https://source4.com": "https://destination4.com",
+					Points: map[internal.SrcUrl]internal.DstUrl{
+						"source3.com": "https://destination3.com",
+						"source4.com": "https://destination4.com",
 					},
 				},
 			},
@@ -72,21 +73,34 @@ func main() {
 	<-quit
 }
 
-func proxyPort(list data.PointList) {
+func proxyPort(list internal.PointList) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	points := list.Points
 
-	proxyMap := make(map[data.DstUrl]*httputil.ReverseProxy)
+	proxyMap := make(map[internal.DstUrl]*httputil.ReverseProxy)
 	for _, dst := range points {
 		parse, _ := url.Parse(string(dst))
 		reverseProxy := httputil.NewSingleHostReverseProxy(parse)
 		proxyMap[dst] = reverseProxy
 	}
-
-	err := http3.ListenAndServeTLS(fmt.Sprintf(":%d", list.Port), config.CertFile, config.KeyFile, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	mux := http.NewServeMux()
+	server := http3.Server{
+		Handler: mux,
+		Addr:    fmt.Sprintf(":%d", list.Port),
+		QUICConfig: &quic.Config{
+			Allow0RTT:       false,
+			EnableDatagrams: true,
+		},
+	}
+	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor < 3 {
+			_ = server.SetQUICHeaders(w.Header())
+			http.Redirect(w, r, "https://"+r.Host+r.RequestURI, http.StatusMovedPermanently)
+			return
+		}
 		var (
-			srcUrl = data.SrcUrl(r.Host)
+			srcUrl = internal.SrcUrl(r.Host)
 			dstUrl = points[srcUrl]
 		)
 		r.Host = string(dstUrl)
@@ -109,5 +123,7 @@ func proxyPort(list data.PointList) {
 			brotliNode.Process(w, r)
 		}
 	}))
+
+	err := server.ListenAndServeTLS(config.CertFile, config.KeyFile)
 	log.Fatalf("proxy port %d fail: %v", list.Port, err)
 }

@@ -1,4 +1,4 @@
-package data
+package internal
 
 type SrcUrl string
 type DstUrl string
