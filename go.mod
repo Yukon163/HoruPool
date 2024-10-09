@@ -1,4 +1,4 @@
-module AkuaProxy
+module Horu
 
 go 1.22
 
