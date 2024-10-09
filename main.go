@@ -1,9 +1,9 @@
 package main
 
 import (
-	"AkuaProxy/confbox"
-	"AkuaProxy/httpcompress"
-	"AkuaProxy/internal"
+	"Horu/confbox"
+	"Horu/httpcompress"
+	"Horu/internal"
 	"encoding/json"
 	"flag"
 	"fmt"
