@@ -17,9 +17,10 @@
 - Verrrryyyy easy for use.
 - Pure golang.
 - High performance.
+- http**3** support!
 - Automatically select **Brotli**, **zlib**, and **gzip** compression algorithms.
 
-## Usage
+## Quick Use
 
 <p align="center">
     <img src="https://img.shields.io/badge/license-MIT-blue" alt="license"/>
@@ -34,16 +35,15 @@
 2. Edit the config.
 
 ```yaml
-point_lists:
+entry_list:
     - port: 8080
-      points:
-        https://source.com:443: https://destination1.com
-        https://source.cn: http://destination2.com
-        http://source.cat: https://destination3.com
+      maps:
+        source1.com: https://destination1.com
+        source2.com: https://destination2.com
     - port: 80
-      points:
-        https://source2.com: https://localhost:8088
-        https://source2.com: https://destination4.com
+      maps:
+        source3.com: https://destination3.com
+        source4.com: https://destination4.com
 key_file: path/to/your/server.key
 cert_file: path/to/your/server.crt
 ```
@@ -51,7 +51,7 @@ cert_file: path/to/your/server.crt
 3. Run
 
 ```shell
-./horu -c /path/to/config.yaml
+./horu -c /etc/horu/config.yaml
 ```
 
 ## Notice
