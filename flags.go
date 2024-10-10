@@ -6,6 +6,8 @@ import (
 	"flag"
 	"log"
 	"os"
+	"path/filepath"
+	"time"
 )
 
 var config internal.Config
@@ -13,6 +15,7 @@ var config internal.Config
 func init() {
 	confPath := flag.String("c", "/etc/horu/config.yaml", "config file path(yaml).")
 	demo := flag.Bool("demo", false, "Give a demo config file.")
+	logToFile := flag.Bool("l", true, "Redirect log to /etc/horu/log/hh-mm.log.")
 	flag.Parse()
 
 	if *demo {
@@ -41,6 +44,19 @@ func init() {
 		}
 		log.Println("Demo file generated! (./demo.yaml)")
 		os.Exit(1)
+	}
+	if *logToFile {
+		now := time.Now()
+		logFileName := now.Format("15-04") + ".log"
+		logFilePath := filepath.Join("/etc/horu/log/", logFileName)
+
+		file, err := os.OpenFile(logFilePath, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			log.Fatalf("error opening log file: %v", err)
+		}
+		defer file.Close()
+
+		log.SetOutput(file)
 	}
 
 	if err := confbox.Load(*confPath, &config); err != nil {
