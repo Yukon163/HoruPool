@@ -41,7 +41,7 @@ func proxyPort(entry internal.PortEntry) {
 		},
 	}
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		log.Println("get", r.Host, r.ProtoMajor)
+		log.Println("http3 get", r.Host, r.ProtoMajor)
 
 		srcUrl := internal.SrcUrl(r.Host)
 		dstUrl, exists := maps[srcUrl]
@@ -69,6 +69,14 @@ func proxyPort(entry internal.PortEntry) {
 		brotliNode.Process(w, r)
 		runtime.GC()
 	}))
+	go func(Addr string, server *http3.Server, handler *http.ServeMux) {
+		err := http.ListenAndServeTLS(addr, config.CertFile, config.KeyFile, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			log.Println("http2 get", r.Host, r.ProtoMajor)
+			_ = server.SetQUICHeaders(w.Header())
+			handler.ServeHTTP(w, r)
+		}))
+		log.Fatalf("proxy port %d listen http2 fail: %v", entry.Port, err)
+	}(addr, &http3Server, mux)
 
 	err := http3Server.ListenAndServeTLS(config.CertFile, config.KeyFile)
 
