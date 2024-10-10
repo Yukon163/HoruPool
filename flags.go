@@ -12,6 +12,9 @@ import (
 
 var config internal.Config
 
+const HoruDir = "/etc/horu"
+const HoruLogDir = "/etc/horu/log"
+
 func init() {
 	confPath := flag.String("c", "/etc/horu/config.yaml", "config file path(yaml).")
 	demo := flag.Bool("demo", false, "Give a demo config file.")
@@ -44,6 +47,10 @@ func init() {
 		}
 		log.Println("Demo file generated! (./demo.yaml)")
 		os.Exit(1)
+	}
+	err := os.MkdirAll(HoruLogDir, 0755)
+	if err != nil {
+		log.Fatalf("error creating horu directory: %v", err)
 	}
 	if *logToFile {
 		now := time.Now()
