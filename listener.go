@@ -32,8 +32,23 @@ func proxyPort(entry internal.PortEntry) {
 	proxyMaps := convertMaps(maps)
 	mux := http.NewServeMux()
 	addr := fmt.Sprintf(":%d", entry.Port)
-
+	http3Server := http3.Server{
+		Addr:    addr,
+		Handler: mux,
+		QUICConfig: &quic.Config{
+			Allow0RTT:       false,
+			EnableDatagrams: true,
+		},
+	}
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.ProtoMajor < 3 {
+			_ = http3Server.SetQUICHeaders(w.Header())
+		}
+
+		if r.URL.Scheme != "https" {
+			http.Redirect(w, r, "https://"+r.Host+r.URL.Path, http.StatusMovedPermanently)
+			return
+		}
 		log.Println("get", r.Host, r.ProtoMajor)
 
 		srcUrl := internal.SrcUrl(r.Host)
@@ -63,14 +78,6 @@ func proxyPort(entry internal.PortEntry) {
 		runtime.GC()
 	}))
 
-	http3Server := http3.Server{
-		Addr:    addr,
-		Handler: mux,
-		QUICConfig: &quic.Config{
-			Allow0RTT:       false,
-			EnableDatagrams: true,
-		},
-	}
 	err := http3Server.ListenAndServeTLS(config.CertFile, config.KeyFile)
 
 	log.Fatalf("proxy port %d listen http3 fail: %v", entry.Port, err)
