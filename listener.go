@@ -62,10 +62,7 @@ func proxyPort(entry internal.PortEntry) {
 		brotliNode.Process(w, r)
 		runtime.GC()
 	}))
-	go func(Addr string, handler http.Handler) {
-		err := http.ListenAndServeTLS(Addr, config.CertFile, config.KeyFile, handler)
-		log.Fatalf("proxy port %d listen http2 fail: %v", entry.Port, err)
-	}(addr, mux)
+
 	http3Server := http3.Server{
 		Addr:    addr,
 		Handler: mux,
@@ -75,5 +72,6 @@ func proxyPort(entry internal.PortEntry) {
 		},
 	}
 	err := http3Server.ListenAndServeTLS(config.CertFile, config.KeyFile)
+
 	log.Fatalf("proxy port %d listen http3 fail: %v", entry.Port, err)
 }
