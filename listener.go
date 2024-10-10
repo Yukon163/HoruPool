@@ -41,11 +41,6 @@ func proxyPort(entry internal.PortEntry) {
 		},
 	}
 	mux.Handle("/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-
-		//if r.URL.Scheme != "https" {
-		//	http.Redirect(w, r, "https://"+r.Host+r.URL.Path, http.StatusMovedPermanently)
-		//	return
-		//}
 		log.Println("get", r.Host, r.ProtoMajor)
 
 		srcUrl := internal.SrcUrl(r.Host)
