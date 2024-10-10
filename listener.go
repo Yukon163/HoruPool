@@ -45,10 +45,10 @@ func proxyPort(entry internal.PortEntry) {
 			_ = http3Server.SetQUICHeaders(w.Header())
 		}
 
-		if r.URL.Scheme != "https" {
-			http.Redirect(w, r, "https://"+r.Host+r.URL.Path, http.StatusMovedPermanently)
-			return
-		}
+		//if r.URL.Scheme != "https" {
+		//	http.Redirect(w, r, "https://"+r.Host+r.URL.Path, http.StatusMovedPermanently)
+		//	return
+		//}
 		log.Println("get", r.Host, r.ProtoMajor)
 
 		srcUrl := internal.SrcUrl(r.Host)
