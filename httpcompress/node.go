@@ -16,7 +16,7 @@ func (chain *Chain) Init(nodes ...INode) {
 	for i := 0; i < len(nodes)-1; i++ {
 		nodes[i].SetNext(nodes[i+1])
 	}
-	chain.local = make(map[string]any)
+	chain.local = make(map[string]any, 2)
 }
 func (chain *Chain) GetLocal(key string) any {
 	return chain.local[key]

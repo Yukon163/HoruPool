@@ -3,13 +3,13 @@ package internal
 type SrcUrl string
 type DstUrl string
 
-type PointList struct {
-	Port   int               `yaml:"port"`
-	Points map[SrcUrl]DstUrl `yaml:"points"`
+type PortEntry struct {
+	Port int               `yaml:"port"`
+	Maps map[SrcUrl]DstUrl `yaml:"maps"`
 }
 
 type Config struct {
-	PointLists []PointList `yaml:"point_lists"`
-	KeyFile    string      `yaml:"key_file"`
-	CertFile   string      `yaml:"cert_file"`
+	EntryList []PortEntry `yaml:"entry_list"`
+	KeyFile   string      `yaml:"key_file"`
+	CertFile  string      `yaml:"cert_file"`
 }
