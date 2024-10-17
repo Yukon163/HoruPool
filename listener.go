@@ -49,7 +49,12 @@ func proxyPort(entry internal.PortEntry) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
-		r.Host = string(dstUrl)
+		dstHost, err := url.Parse(string(dstUrl))
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		r.Host = dstHost.Host
 
 		chain := new(httpcompress.Chain)
 
