@@ -6,13 +6,16 @@ import (
 )
 
 func TestNewPool(t *testing.T) {
-	f := func(boo bool) {
-		fmt.Println(boo)
+	f := func(args ...any) {
+		for _, arg := range args {
+			fmt.Println("Function called with:", arg)
+		}
 	}
-	pool := NewPool[bool, func(bool)](1, 1, f)
+	pool := NewPool[bool, func(bool)](1, 1)
 	fmt.Println(pool)
-	pool.JobQueue <- true
-	pool.JobQueue <- false
-	pool.JobQueue <- true
+	pool.addJob(f, true, false)
+	//pool.JobQueue <- (f, true)
+	//pool.JobQueue <- false
+	//pool.JobQueue <- true
 	pool.WaitAll()
 }
