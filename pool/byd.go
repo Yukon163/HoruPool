@@ -12,34 +12,34 @@ import (
 //	argus []A
 //}
 
-type JobFunc interface {
+type job struct {
+	fun   jobFunc
+	argus []interface{}
+}
+
+type jobFunc interface {
 	Call(args ...interface{})
 }
 
 type funcAdapter struct {
-	f func(...interface{})
-}
-
-type job struct {
-	fun    JobFunc
-	params []interface{} // 使用切片存储变长参数
+	fun func(...interface{})
 }
 
 func (fa funcAdapter) Call(args ...interface{}) {
-	fa.f(args...)
+	fa.fun(args...)
 }
 
-type worker[A any, F any] struct {
-	workerPool chan *worker[A, F]
-	jobChannel chan job[A, F]
+type worker struct {
+	workerPool chan *worker
+	jobChannel chan job
 	stop       chan struct{}
 }
 
-func (w *worker[A, F]) start() {
-	go func(w *worker[A, F]) {
+func (w *worker) start() {
+	go func(w *worker) {
 		runtime.LockOSThread()
 		defer runtime.UnlockOSThread()
-		var j job[A, F]
+		var j job
 		for {
 			// worker free, add it to pool
 			w.workerPool <- w
@@ -47,6 +47,7 @@ func (w *worker[A, F]) start() {
 			select {
 			case j = <-w.jobChannel:
 				//j.fun.Call()
+				j.fun.Call(j.argus...)
 				runtime.Gosched()
 			case <-w.stop:
 				w.stop <- struct{}{}
@@ -56,22 +57,22 @@ func (w *worker[A, F]) start() {
 	}(w)
 }
 
-func newWorker[A any, F any](pool chan *worker[A, F]) *worker[A, F] {
-	return &worker[A, F]{
+func newWorker(pool chan *worker) *worker {
+	return &worker{
 		workerPool: pool,
-		jobChannel: make(chan job[A, F]),
+		jobChannel: make(chan job),
 		stop:       make(chan struct{}),
 	}
 }
 
 // Accepts jobs from clients, and waits for first free worker to deliver job
-type dispatcher[A any, F any] struct {
-	workerPool chan *worker[A, F]
-	jobQueue   chan job[A, F]
+type dispatcher struct {
+	workerPool chan *worker
+	jobQueue   chan job
 	stop       chan struct{}
 }
 
-func (d *dispatcher[A, F]) dispatch() {
+func (d *dispatcher) dispatch() {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 	for {
@@ -97,8 +98,8 @@ func (d *dispatcher[A, F]) dispatch() {
 	}
 }
 
-func newDispatcher[A any, F any](workerPool chan *worker[A, F], jobQueue chan job[A, F]) *dispatcher[A, F] {
-	d := &dispatcher[A, F]{
+func newDispatcher(workerPool chan *worker, jobQueue chan job) *dispatcher {
+	d := &dispatcher{
 		workerPool: workerPool,
 		jobQueue:   jobQueue,
 		stop:       make(chan struct{}),
@@ -113,48 +114,48 @@ func newDispatcher[A any, F any](workerPool chan *worker[A, F], jobQueue chan jo
 	return d
 }
 
-type Pool[A any, F any] struct {
-	JobQueue   chan job[A, F]
-	dispatcher *dispatcher[A, F]
+type Pool struct {
+	JobQueue   chan job
+	dispatcher *dispatcher
 	wg         sync.WaitGroup
 }
 
-func NewPool[A any, F any](numWorkers int, jobQueueLen int) *Pool[A, F] {
-	jobQueue := make(chan job[A, F], jobQueueLen)
-	workerPool := make(chan *worker[A, F], numWorkers)
+func NewPool(numWorkers int, jobQueueLen int) *Pool {
+	jobQueue := make(chan job, jobQueueLen)
+	workerPool := make(chan *worker, numWorkers)
 
-	pool := &Pool[A, F]{
+	pool := &Pool{
 		JobQueue:   jobQueue,
-		dispatcher: newDispatcher[A, F](workerPool, jobQueue),
+		dispatcher: newDispatcher(workerPool, jobQueue),
 	}
 	return pool
 }
 
-func (p *Pool[A, F]) addJob(fun F, argus ...A) {
-	p.JobQueue <- job[A, F]{fun, argus}
+func (p *Pool) addJob(fun func(...interface{}), argus ...interface{}) {
+	p.JobQueue <- job{fun: funcAdapter{fun: fun}, argus: argus}
 }
 
 // In case you are using WaitAll fn, you should call this method
 // every time your job is done.
 
 // JobDone If you are not using WaitAll then we assume you have your own way of synchronizing.
-func (p *Pool[A, F]) JobDone() {
+func (p *Pool) JobDone() {
 	p.wg.Done()
 }
 
 // WaitCount How many jobs we should wait when calling WaitAll.
 // It is using WaitGroup Add/Done/Wait
-func (p *Pool[A, F]) WaitCount(count int) {
+func (p *Pool) WaitCount(count int) {
 	p.wg.Add(count)
 }
 
 // WaitAll Will wait for all jobs to finish.
-func (p *Pool[A, F]) WaitAll() {
+func (p *Pool) WaitAll() {
 	p.wg.Wait()
 }
 
 // Release Will release resources used by pool
-func (p *Pool[A, F]) Release() {
+func (p *Pool) Release() {
 	p.dispatcher.stop <- struct{}{}
 	<-p.dispatcher.stop
 }

@@ -3,6 +3,7 @@ package pool
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
 func TestNewPool(t *testing.T) {
@@ -11,11 +12,17 @@ func TestNewPool(t *testing.T) {
 			fmt.Println("Function called with:", arg)
 		}
 	}
-	pool := NewPool[bool, func(bool)](1, 1)
+
+	//f1 := func(arg1 int, arg2 string) {
+	//	fmt.Printf("Function horued with: %d, %s", arg1, arg2)
+	//}
+	pool := NewPool(1, 1)
 	fmt.Println(pool)
 	pool.addJob(f, true, false)
-	//pool.JobQueue <- (f, true)
+	//pool.addJob(f1, 1, false)
+	//pool.JobQueue <- (fun, true)
 	//pool.JobQueue <- false
 	//pool.JobQueue <- true
-	pool.WaitAll()
+	//pool.WaitAll()
+	time.Sleep(50 * time.Millisecond)
 }
